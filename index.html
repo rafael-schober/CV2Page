@@ -1,0 +1,968 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CV2Page — Turn your CV into a website in seconds</title>
+<meta name="description" content="Upload your CV, answer 10 questions, and get a beautiful personal website ready to publish. Powered by Claude AI.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,500;1,400&family=Epilogue:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+/* ── Reset & Base ── */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --bg:       #0c0c0a;
+  --surface:  #141412;
+  --surface2: #1c1c19;
+  --border:   rgba(255,255,255,0.08);
+  --border2:  rgba(255,255,255,0.14);
+  --text:     #f0ede6;
+  --muted:    #7a7870;
+  --muted2:   #555350;
+  --accent:   #d4a843;
+  --accent2:  #e8c06a;
+  --green:    #4a9e6e;
+  --green-bg: rgba(74,158,110,0.12);
+  --red:      #c0392b;
+  --red-bg:   rgba(192,57,43,0.1);
+  --serif:    'Playfair Display', Georgia, serif;
+  --sans:     'Epilogue', system-ui, sans-serif;
+  --r:        10px;
+  --r-lg:     18px;
+}
+
+html { scroll-behavior: smooth; }
+
+body {
+  font-family: var(--sans);
+  background: var(--bg);
+  color: var(--text);
+  font-size: 15px;
+  line-height: 1.65;
+  min-height: 100vh;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ── Landing Page ── */
+#landingPage { display: block; }
+#appPage     { display: none; }
+
+/* Nav */
+.nav {
+  position: fixed; top: 0; left: 0; right: 0;
+  z-index: 100;
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 1.25rem 2.5rem;
+  background: rgba(12,12,10,0.85);
+  backdrop-filter: blur(12px);
+  border-bottom: 1px solid var(--border);
+}
+
+.nav-logo {
+  font-family: var(--serif);
+  font-size: 20px;
+  color: var(--text);
+  letter-spacing: -0.3px;
+}
+
+.nav-logo em { color: var(--accent); font-style: italic; }
+
+.nav-cta {
+  font-family: var(--sans);
+  font-size: 13px;
+  font-weight: 500;
+  padding: 8px 20px;
+  border-radius: 6px;
+  border: 1px solid var(--accent);
+  color: var(--accent);
+  background: transparent;
+  cursor: pointer;
+  transition: all 0.2s;
+  letter-spacing: 0.02em;
+}
+
+.nav-cta:hover { background: var(--accent); color: var(--bg); }
+
+/* Hero */
+.hero {
+  min-height: 100vh;
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  text-align: center;
+  padding: 8rem 1.5rem 4rem;
+  position: relative;
+  overflow: hidden;
+}
+
+.hero::before {
+  content: '';
+  position: absolute; top: 0; left: 50%; transform: translateX(-50%);
+  width: 600px; height: 600px;
+  background: radial-gradient(circle, rgba(212,168,67,0.07) 0%, transparent 70%);
+  pointer-events: none;
+}
+
+.hero-tag {
+  display: inline-flex; align-items: center; gap: 6px;
+  font-size: 11px; font-weight: 500; letter-spacing: 0.1em;
+  text-transform: uppercase; color: var(--accent);
+  border: 1px solid rgba(212,168,67,0.3);
+  padding: 5px 14px; border-radius: 20px;
+  margin-bottom: 2rem;
+  animation: fadeUp 0.6s ease both;
+}
+
+.hero-tag::before { content: '✦'; font-size: 9px; }
+
+.hero-title {
+  font-family: var(--serif);
+  font-size: clamp(42px, 7vw, 80px);
+  font-weight: 400;
+  line-height: 1.1;
+  letter-spacing: -1px;
+  margin-bottom: 1.5rem;
+  animation: fadeUp 0.6s 0.1s ease both;
+}
+
+.hero-title em { font-style: italic; color: var(--accent); }
+
+.hero-sub {
+  font-size: 17px;
+  color: var(--muted);
+  max-width: 480px;
+  margin: 0 auto 3rem;
+  font-weight: 300;
+  animation: fadeUp 0.6s 0.2s ease both;
+}
+
+.hero-btn {
+  display: inline-flex; align-items: center; gap: 10px;
+  font-family: var(--sans); font-size: 15px; font-weight: 500;
+  padding: 14px 32px; border-radius: var(--r);
+  background: var(--accent); color: var(--bg);
+  border: none; cursor: pointer;
+  transition: all 0.25s;
+  animation: fadeUp 0.6s 0.3s ease both;
+}
+
+.hero-btn:hover { background: var(--accent2); transform: translateY(-2px); }
+.hero-btn svg { width: 16px; height: 16px; }
+
+.hero-steps {
+  display: flex; align-items: center; gap: 0;
+  margin-top: 4rem;
+  animation: fadeUp 0.6s 0.4s ease both;
+}
+
+.hero-step {
+  display: flex; align-items: center; gap: 10px;
+  font-size: 13px; color: var(--muted);
+}
+
+.step-num {
+  width: 26px; height: 26px; border-radius: 50%;
+  border: 1px solid var(--border2);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 11px; font-weight: 500; color: var(--muted2);
+  flex-shrink: 0;
+}
+
+.step-sep {
+  width: 40px; height: 1px;
+  background: var(--border);
+  margin: 0 8px;
+}
+
+/* Features section */
+.features {
+  padding: 6rem 2rem;
+  max-width: 960px; margin: 0 auto;
+}
+
+.features-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 1px;
+  background: var(--border);
+  border: 1px solid var(--border);
+  border-radius: var(--r-lg);
+  overflow: hidden;
+}
+
+.feat-card {
+  background: var(--surface);
+  padding: 2rem;
+}
+
+.feat-icon {
+  font-size: 22px; margin-bottom: 1rem;
+}
+
+.feat-title {
+  font-family: var(--serif);
+  font-size: 18px; font-weight: 400;
+  margin-bottom: 0.5rem;
+}
+
+.feat-desc { font-size: 13px; color: var(--muted); line-height: 1.7; }
+
+/* Footer */
+.landing-footer {
+  text-align: center;
+  padding: 3rem 1rem;
+  border-top: 1px solid var(--border);
+  font-size: 13px;
+  color: var(--muted2);
+}
+
+.landing-footer a { color: var(--muted); text-decoration: none; }
+.landing-footer a:hover { color: var(--accent); }
+
+/* ── App ── */
+.app-wrap {
+  max-width: 780px; margin: 0 auto;
+  padding: 0 1.5rem 5rem;
+}
+
+.app-nav {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 1.5rem 0 2.5rem;
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 2.5rem;
+}
+
+.app-logo {
+  font-family: var(--serif);
+  font-size: 18px; color: var(--text);
+}
+
+.app-logo em { color: var(--accent); font-style: italic; }
+
+.back-btn {
+  font-size: 13px; color: var(--muted); background: none;
+  border: none; cursor: pointer; display: flex; align-items: center; gap: 5px;
+  font-family: var(--sans);
+}
+
+.back-btn:hover { color: var(--text); }
+
+/* Progress */
+.progress-bar {
+  display: flex; align-items: center;
+  gap: 0; margin-bottom: 3rem;
+}
+
+.pb-step {
+  flex: 1; display: flex; flex-direction: column;
+  align-items: center; gap: 7px;
+  position: relative;
+}
+
+.pb-step:not(:last-child)::after {
+  content: '';
+  position: absolute; top: 13px;
+  left: calc(50% + 13px); right: calc(-50% + 13px);
+  height: 1px; background: var(--border);
+  transition: background 0.4s;
+}
+
+.pb-step.done:not(:last-child)::after { background: var(--accent); }
+
+.pb-num {
+  width: 26px; height: 26px; border-radius: 50%;
+  border: 1px solid var(--border2);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 11px; font-weight: 500; color: var(--muted);
+  background: var(--surface); z-index: 1;
+  transition: all 0.3s;
+}
+
+.pb-step.active .pb-num { background: var(--accent); border-color: var(--accent); color: var(--bg); }
+.pb-step.done   .pb-num { background: var(--text);   border-color: var(--text);   color: var(--bg); }
+
+.pb-label { font-size: 11px; color: var(--muted2); white-space: nowrap; }
+.pb-step.active .pb-label { color: var(--accent); }
+.pb-step.done   .pb-label { color: var(--muted); }
+
+/* Panels */
+.panel { display: none; }
+.panel.active { display: block; animation: fadeUp 0.3s ease; }
+
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(10px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* Section header */
+.s-title {
+  font-family: var(--serif);
+  font-size: 30px; font-weight: 400;
+  letter-spacing: -0.3px;
+  margin-bottom: 0.35rem;
+}
+
+.s-sub { font-size: 14px; color: var(--muted); margin-bottom: 2rem; }
+
+/* API key notice */
+.api-notice {
+  background: rgba(212,168,67,0.07);
+  border: 1px solid rgba(212,168,67,0.2);
+  border-radius: var(--r);
+  padding: 1rem 1.25rem;
+  font-size: 13px;
+  color: #c9a03e;
+  margin-bottom: 1.5rem;
+}
+
+.api-notice strong { color: var(--accent); }
+
+.api-row { display: flex; gap: 8px; margin-top: 0.75rem; }
+
+.api-input {
+  flex: 1; font-family: var(--sans); font-size: 13px;
+  background: var(--surface2); border: 1px solid var(--border2);
+  border-radius: 7px; padding: 8px 12px; color: var(--text); outline: none;
+  transition: border-color 0.2s;
+}
+
+.api-input:focus { border-color: var(--accent); }
+.api-input::placeholder { color: var(--muted2); }
+
+.api-save {
+  font-family: var(--sans); font-size: 12px; font-weight: 500;
+  padding: 8px 16px; background: var(--accent); color: var(--bg);
+  border: none; border-radius: 7px; cursor: pointer;
+}
+
+.api-save:hover { background: var(--accent2); }
+
+/* Upload */
+.upload-zone {
+  border: 1.5px dashed var(--border2);
+  border-radius: var(--r-lg);
+  padding: 3.5rem 2rem;
+  text-align: center;
+  cursor: pointer;
+  background: var(--surface);
+  transition: all 0.25s;
+}
+
+.upload-zone:hover { border-color: var(--accent); background: rgba(212,168,67,0.04); }
+.upload-zone.has-file { border-color: var(--green); border-style: solid; background: var(--green-bg); }
+
+.upload-icon {
+  width: 54px; height: 54px; border-radius: 13px;
+  border: 1px solid var(--border2);
+  background: var(--surface2);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 22px; margin: 0 auto 1.25rem;
+}
+
+.upload-zone.has-file .upload-icon { border-color: var(--green); }
+
+.upload-title { font-size: 16px; font-weight: 500; margin-bottom: 4px; }
+.upload-hint  { font-size: 13px; color: var(--muted); }
+.upload-ok    { font-size: 14px; color: var(--green); font-weight: 500; }
+
+#fileInput { display: none; }
+
+/* Questions */
+.q-table {
+  border: 1px solid var(--border);
+  border-radius: var(--r-lg); overflow: hidden;
+}
+
+.q-row {
+  display: grid; grid-template-columns: 200px 1fr;
+  gap: 1.5rem; align-items: start;
+  padding: 1.1rem 1.4rem;
+  border-bottom: 1px solid var(--border);
+  background: var(--surface);
+  transition: background 0.15s;
+}
+
+.q-row:last-child { border-bottom: none; }
+.q-row:hover { background: var(--surface2); }
+
+@media (max-width: 560px) {
+  .q-row { grid-template-columns: 1fr; gap: 0.75rem; }
+}
+
+.q-label {
+  font-size: 13px; font-weight: 400; color: var(--text);
+  padding-top: 5px;
+}
+
+.q-num { font-size: 11px; color: var(--muted2); display: block; margin-bottom: 2px; }
+
+.chips { display: flex; flex-wrap: wrap; gap: 6px; }
+
+.chip {
+  font-size: 12px; font-family: var(--sans);
+  padding: 5px 13px; border-radius: 20px;
+  border: 1px solid var(--border2); background: var(--surface2);
+  color: var(--muted); cursor: pointer; transition: all 0.15s;
+}
+
+.chip:hover { border-color: var(--accent); color: var(--accent); }
+.chip.on { background: rgba(212,168,67,0.15); border-color: var(--accent); color: var(--accent2); }
+
+.swatches { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+
+.sw {
+  width: 26px; height: 26px; border-radius: 50%;
+  border: 2px solid transparent; cursor: pointer;
+  transition: transform 0.15s;
+}
+
+.sw:hover { transform: scale(1.2); }
+.sw.on { border-color: var(--text); transform: scale(1.2); }
+
+.q-textarea {
+  width: 100%; font-family: var(--sans); font-size: 13px;
+  background: var(--surface2); border: 1px solid var(--border2);
+  border-radius: 7px; padding: 8px 12px; color: var(--text);
+  outline: none; resize: none; min-height: 64px;
+  transition: border-color 0.2s;
+}
+
+.q-textarea:focus { border-color: var(--accent); }
+.q-textarea::placeholder { color: var(--muted2); }
+
+/* Buttons */
+.btn {
+  font-family: var(--sans); font-size: 14px; font-weight: 500;
+  padding: 10px 22px; border-radius: var(--r);
+  cursor: pointer; transition: all 0.2s; border: 1px solid transparent;
+}
+
+.btn-ghost {
+  background: transparent; border-color: var(--border2); color: var(--muted);
+}
+.btn-ghost:hover { color: var(--text); border-color: var(--muted); }
+
+.btn-dark {
+  background: var(--text); color: var(--bg); border-color: var(--text);
+}
+.btn-dark:hover { background: var(--accent); border-color: var(--accent); color: var(--bg); }
+.btn-dark:disabled { background: var(--surface2); color: var(--muted2); border-color: var(--border); cursor: not-allowed; }
+
+.btn-gold {
+  background: var(--accent); color: var(--bg); border-color: var(--accent);
+  font-size: 15px; padding: 11px 28px;
+}
+.btn-gold:hover { background: var(--accent2); }
+
+.btn-green {
+  background: var(--green); color: white; border-color: var(--green);
+  font-size: 15px; padding: 11px 28px;
+}
+.btn-green:hover { background: #3d8a5e; }
+
+.nav-row {
+  display: flex; justify-content: space-between; align-items: center;
+  margin-top: 2rem;
+}
+
+/* Generating */
+.gen-wrap { text-align: center; padding: 5rem 1rem; }
+
+.gen-ring {
+  width: 48px; height: 48px;
+  border: 2.5px solid var(--border2);
+  border-top-color: var(--accent);
+  border-radius: 50%;
+  animation: spin 0.85s linear infinite;
+  margin: 0 auto 2rem;
+}
+
+@keyframes spin { to { transform: rotate(360deg); } }
+
+.gen-title { font-family: var(--serif); font-size: 28px; margin-bottom: 0.5rem; }
+.gen-sub   { font-size: 14px; color: var(--muted); margin-bottom: 2.5rem; }
+
+.gen-steps { display: inline-flex; flex-direction: column; gap: 10px; text-align: left; }
+
+.gen-step {
+  display: flex; align-items: center; gap: 10px;
+  font-size: 13px; color: var(--muted2);
+  transition: color 0.3s;
+}
+
+.gen-step.active { color: var(--accent); font-weight: 500; }
+.gen-step.done   { color: var(--green); }
+
+.gs-dot {
+  width: 7px; height: 7px; border-radius: 50%;
+  background: var(--border2); flex-shrink: 0;
+  transition: background 0.3s;
+}
+
+.gen-step.active .gs-dot { background: var(--accent); }
+.gen-step.done   .gs-dot { background: var(--green); }
+
+.error-box {
+  display: none;
+  margin-top: 1.5rem;
+  background: var(--red-bg);
+  border: 1px solid rgba(192,57,43,0.3);
+  border-radius: var(--r);
+  padding: 1rem 1.25rem;
+  font-size: 13px; color: #e05c4a;
+  max-width: 480px; margin-left: auto; margin-right: auto;
+}
+
+/* Preview */
+.preview-chrome {
+  border: 1px solid var(--border2);
+  border-radius: var(--r-lg); overflow: hidden;
+  margin-bottom: 1.5rem;
+}
+
+.chrome-bar {
+  background: var(--surface2); padding: 9px 14px;
+  display: flex; align-items: center; gap: 6px;
+  border-bottom: 1px solid var(--border);
+}
+
+.cd { width: 10px; height: 10px; border-radius: 50%; }
+
+.chrome-url {
+  flex: 1; margin-left: 8px;
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: 5px; padding: 3px 10px;
+  font-size: 11px; color: var(--muted2);
+}
+
+.preview-iframe { width: 100%; height: 460px; border: none; display: block; }
+
+.result-btns { display: flex; gap: 10px; flex-wrap: wrap; }
+.result-btns .btn { flex: 1; text-align: center; }
+</style>
+</head>
+<body>
+
+<!-- ══════════════ LANDING PAGE ══════════════ -->
+<div id="landingPage">
+
+  <nav class="nav">
+    <div class="nav-logo">CV2<em>Page</em></div>
+    <button class="nav-cta" onclick="showApp()">Get Started →</button>
+  </nav>
+
+  <section class="hero">
+    <div class="hero-tag">Powered by Claude AI</div>
+    <h1 class="hero-title">Your CV.<br>A website<br><em>in seconds.</em></h1>
+    <p class="hero-sub">Upload your CV, answer 10 questions, and receive a beautiful personal website — ready to publish anywhere.</p>
+    <button class="hero-btn" onclick="showApp()">
+      Try it free
+      <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M3 8h10M8 3l5 5-5 5"/>
+      </svg>
+    </button>
+    <div class="hero-steps">
+      <div class="hero-step"><div class="step-num">1</div>Upload CV</div>
+      <div class="step-sep"></div>
+      <div class="hero-step"><div class="step-num">2</div>Answer 10 questions</div>
+      <div class="step-sep"></div>
+      <div class="hero-step"><div class="step-num">3</div>Download & publish</div>
+    </div>
+  </section>
+
+  <section class="features">
+    <div class="features-grid">
+      <div class="feat-card">
+        <div class="feat-icon">⚡</div>
+        <div class="feat-title">Instant generation</div>
+        <p class="feat-desc">Claude AI reads your CV and writes clean, personalised HTML & CSS in under 30 seconds.</p>
+      </div>
+      <div class="feat-card">
+        <div class="feat-icon">✦</div>
+        <div class="feat-title">Fully customisable</div>
+        <p class="feat-desc">Choose your style, colours, tone and sections. Every website is unique to you.</p>
+      </div>
+      <div class="feat-card">
+        <div class="feat-icon">↓</div>
+        <div class="feat-title">One file, anywhere</div>
+        <p class="feat-desc">Download a single HTML file. Upload to GitHub Pages, Netlify, or any web host.</p>
+      </div>
+      <div class="feat-card">
+        <div class="feat-icon">◎</div>
+        <div class="feat-title">No account needed</div>
+        <p class="feat-desc">No login, no subscription, no monthly fees to start. Just upload and generate.</p>
+      </div>
+    </div>
+  </section>
+
+  <footer class="landing-footer">
+    <p>© 2026 CV2Page · Built with <a href="https://anthropic.com" target="_blank">Claude AI</a></p>
+  </footer>
+
+</div>
+
+<!-- ══════════════ APP ══════════════ -->
+<div id="appPage">
+  <div class="app-wrap">
+
+    <div class="app-nav">
+      <div class="app-logo">CV2<em>Page</em></div>
+      <button class="back-btn" onclick="showLanding()">← Back to home</button>
+    </div>
+
+    <!-- Progress -->
+    <div class="progress-bar">
+      <div class="pb-step active" id="pb1">
+        <div class="pb-num">1</div>
+        <div class="pb-label">Upload</div>
+      </div>
+      <div class="pb-step" id="pb2">
+        <div class="pb-num">2</div>
+        <div class="pb-label">Questions</div>
+      </div>
+      <div class="pb-step" id="pb3">
+        <div class="pb-num">3</div>
+        <div class="pb-label">Generate</div>
+      </div>
+      <div class="pb-step" id="pb4">
+        <div class="pb-num">4</div>
+        <div class="pb-label">Preview</div>
+      </div>
+    </div>
+
+    <!-- Panel 1: Upload -->
+    <div class="panel active" id="p1">
+      <h2 class="s-title">Upload your CV</h2>
+      <p class="s-sub">We'll extract your information automatically. PDF, TXT, or DOCX.</p>
+
+      <div class="api-notice" id="apiNotice">
+        <strong>API Key required.</strong> Enter your Anthropic API key — stored locally in your browser only, never sent anywhere else.
+        <div class="api-row">
+          <input class="api-input" type="password" id="apiKeyInput" placeholder="sk-ant-api03-..." />
+          <button class="api-save" onclick="saveKey()">Save</button>
+        </div>
+      </div>
+
+      <div class="upload-zone" id="uploadZone" onclick="document.getElementById('fileInput').click()">
+        <div class="upload-icon" id="uploadIcon">📄</div>
+        <div class="upload-title" id="uploadTitle">Drop your CV here or click to browse</div>
+        <div id="uploadHint" class="upload-hint">PDF · TXT · DOCX — max 10 MB</div>
+      </div>
+      <input type="file" id="fileInput" accept=".pdf,.txt,.docx">
+
+      <div class="nav-row">
+        <span style="font-size:12px;color:var(--muted2)">Step 1 of 4</span>
+        <button class="btn btn-dark" id="btnP1" disabled onclick="goTo(2)">Continue →</button>
+      </div>
+    </div>
+
+    <!-- Panel 2: Questions -->
+    <div class="panel" id="p2">
+      <h2 class="s-title">Customise your site</h2>
+      <p class="s-sub">10 quick questions — takes about 2 minutes.</p>
+
+      <div class="q-table" id="qTable"></div>
+
+      <div class="nav-row">
+        <button class="btn btn-ghost" onclick="goTo(1)">← Back</button>
+        <button class="btn btn-gold" onclick="generate()">Generate my website →</button>
+      </div>
+    </div>
+
+    <!-- Panel 3: Generating -->
+    <div class="panel" id="p3">
+      <div class="gen-wrap">
+        <div class="gen-ring" id="genRing"></div>
+        <div class="gen-title" id="genTitle">Reading your CV…</div>
+        <div class="gen-sub" id="genSub">This takes about 20–30 seconds</div>
+        <div class="gen-steps">
+          <div class="gen-step active" id="gs0"><div class="gs-dot"></div>Analysing CV content</div>
+          <div class="gen-step"        id="gs1"><div class="gs-dot"></div>Configuring design & colours</div>
+          <div class="gen-step"        id="gs2"><div class="gs-dot"></div>Writing HTML & CSS</div>
+          <div class="gen-step"        id="gs3"><div class="gs-dot"></div>Rendering preview</div>
+        </div>
+        <div class="error-box" id="errBox"></div>
+      </div>
+    </div>
+
+    <!-- Panel 4: Preview -->
+    <div class="panel" id="p4">
+      <h2 class="s-title">Your website is ready.</h2>
+      <p class="s-sub">Preview below — download the HTML file and upload it to any web host.</p>
+
+      <div class="preview-chrome">
+        <div class="chrome-bar">
+          <div class="cd" style="background:#ff5f57"></div>
+          <div class="cd" style="background:#febc2e"></div>
+          <div class="cd" style="background:#28c840"></div>
+          <div class="chrome-url">yourname.com</div>
+        </div>
+        <iframe class="preview-iframe" id="previewFrame"></iframe>
+      </div>
+
+      <div class="result-btns">
+        <button class="btn btn-green" onclick="download()">↓ Download HTML</button>
+        <button class="btn btn-ghost" onclick="goTo(2)">← Adjust settings</button>
+        <button class="btn btn-ghost" onclick="restart()">Start over</button>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+/* ── State ── */
+let cvText = '';
+let answers = {};
+let html = '';
+let apiKey = localStorage.getItem('cv2page_key') || '';
+
+if (apiKey) {
+  document.getElementById('apiNotice').style.display = 'none';
+  document.getElementById('apiKeyInput').value = apiKey;
+}
+
+function saveKey() {
+  const v = document.getElementById('apiKeyInput').value.trim();
+  if (v.startsWith('sk-ant') || v.startsWith('sk-')) {
+    apiKey = v;
+    localStorage.setItem('cv2page_key', v);
+    document.getElementById('apiNotice').style.display = 'none';
+  } else {
+    alert('Please enter a valid Anthropic API key (starts with sk-ant)');
+  }
+}
+
+/* ── Pages ── */
+function showApp() {
+  document.getElementById('landingPage').style.display = 'none';
+  document.getElementById('appPage').style.display = 'block';
+  window.scrollTo(0, 0);
+}
+
+function showLanding() {
+  document.getElementById('appPage').style.display = 'none';
+  document.getElementById('landingPage').style.display = 'block';
+  window.scrollTo(0, 0);
+}
+
+/* ── Questions ── */
+const QS = [
+  { id:'goal',     label:'Primary goal',          type:'single', opts:['Find a job','Attract freelance clients','Showcase portfolio','Build my network'] },
+  { id:'style',    label:'Visual style',           type:'single', opts:['Clean & minimal','Modern & bold','Creative & expressive','Corporate & formal'] },
+  { id:'color',    label:'Accent colour',          type:'color',  opts:['#d4a843','#4a9e6e','#4a7fc1','#c0392b','#8e44ad','#16a085','#e67e22'] },
+  { id:'sections', label:'Sections to include',    type:'multi',  opts:['About','Experience','Skills','Projects','Education','Contact','Testimonials','Blog'] },
+  { id:'tone',     label:'Writing tone',           type:'single', opts:['Professional','Friendly & warm','Concise & direct','Visionary'] },
+  { id:'lang',     label:'Website language',       type:'single', opts:['English','German','French','Bilingual EN/DE'] },
+  { id:'industry', label:'Industry',               type:'single', opts:['Tech & Engineering','Design & Creative','Business & Finance','Marketing','Healthcare','Other'] },
+  { id:'photo',    label:'Profile photo',          type:'single', opts:['Yes — prominent','Yes — small','No photo'] },
+  { id:'cta',      label:'Main call to action',    type:'single', opts:['Send an email','Visit LinkedIn','Download CV','Fill contact form'] },
+  { id:'extra',    label:'Highlight something special', type:'text', placeholder:'e.g. "10 years startup experience", "speaks 4 languages", "open source contributor"…' }
+];
+
+function buildQ() {
+  const t = document.getElementById('qTable');
+  t.innerHTML = '';
+  QS.forEach((q, i) => {
+    const row = document.createElement('div');
+    row.className = 'q-row';
+    let ctrl = '';
+    if (q.type === 'color') {
+      ctrl = `<div class="swatches">${q.opts.map(c => `<div class="sw" style="background:${c}" data-q="${q.id}" onclick="pickColor(this,'${q.id}','${c}')"></div>`).join('')}</div>`;
+    } else if (q.type === 'text') {
+      ctrl = `<textarea class="q-textarea" rows="2" placeholder="${q.placeholder}" oninput="answers['${q.id}']=this.value"></textarea>`;
+    } else {
+      const multi = q.type === 'multi';
+      ctrl = `<div class="chips">${q.opts.map(o => `<button class="chip" data-q="${q.id}" onclick="pickChip(this,'${q.id}','${o}',${multi})">${o}</button>`).join('')}</div>`;
+    }
+    row.innerHTML = `<div><span class="q-num">Q${i+1}</span><div class="q-label">${q.label}</div></div><div>${ctrl}</div>`;
+    t.appendChild(row);
+  });
+}
+
+buildQ();
+
+function pickChip(el, qId, val, multi) {
+  if (multi) {
+    el.classList.toggle('on');
+    if (!answers[qId]) answers[qId] = [];
+    const idx = answers[qId].indexOf(val);
+    idx === -1 ? answers[qId].push(val) : answers[qId].splice(idx, 1);
+  } else {
+    document.querySelectorAll(`.chip[data-q="${qId}"]`).forEach(c => c.classList.remove('on'));
+    el.classList.add('on');
+    answers[qId] = val;
+  }
+}
+
+function pickColor(el, qId, val) {
+  document.querySelectorAll(`.sw[data-q="${qId}"]`).forEach(s => s.classList.remove('on'));
+  el.classList.add('on');
+  answers[qId] = val;
+}
+
+/* ── Upload ── */
+const zone = document.getElementById('uploadZone');
+zone.addEventListener('dragover', e => { e.preventDefault(); zone.style.borderColor = 'var(--accent)'; });
+zone.addEventListener('dragleave', () => { zone.style.borderColor = ''; });
+zone.addEventListener('drop', e => { e.preventDefault(); const f = e.dataTransfer.files[0]; if (f) handleFile(f); });
+document.getElementById('fileInput').addEventListener('change', e => { if (e.target.files[0]) handleFile(e.target.files[0]); });
+
+function handleFile(f) {
+  zone.classList.add('has-file');
+  document.getElementById('uploadIcon').textContent = '✓';
+  document.getElementById('uploadTitle').textContent = f.name;
+  document.getElementById('uploadTitle').style.color = 'var(--green)';
+  document.getElementById('uploadHint').innerHTML = `<span class="upload-ok">${(f.size/1024).toFixed(0)} KB · Ready</span>`;
+  document.getElementById('btnP1').disabled = false;
+  const r = new FileReader();
+  r.onload = ev => { cvText = ev.target.result || ''; };
+  r.readAsText(f);
+}
+
+/* ── Navigation ── */
+function goTo(n) {
+  document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+  document.getElementById('p' + n).classList.add('active');
+  for (let i = 1; i <= 4; i++) {
+    const s = document.getElementById('pb' + i);
+    s.classList.remove('active','done');
+    if (i < n) s.classList.add('done');
+    else if (i === n) s.classList.add('active');
+  }
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+/* ── Generate ── */
+async function generate() {
+  if (!apiKey) {
+    alert('Please add your Anthropic API key first (Step 1).');
+    goTo(1); return;
+  }
+  goTo(3);
+
+  const ids = ['gs0','gs1','gs2','gs3'];
+  const labels = ['Reading your CV…','Configuring design…','Writing HTML & CSS…','Rendering preview…'];
+
+  function setStep(i) {
+    ids.forEach((id, j) => {
+      const el = document.getElementById(id);
+      el.classList.remove('active','done');
+      if (j < i) el.classList.add('done');
+      else if (j === i) el.classList.add('active');
+    });
+    document.getElementById('genTitle').textContent = labels[i];
+  }
+
+  setStep(0);
+  setTimeout(() => setStep(1), 2000);
+  setTimeout(() => setStep(2), 4500);
+
+  const secs = Array.isArray(answers.sections) ? answers.sections.join(', ') : 'About, Experience, Skills, Contact';
+
+  const prompt = `You are a world-class web designer and front-end developer. Create a complete, beautiful, single-file HTML personal website.
+
+CV CONTENT:
+"""
+${cvText ? cvText.slice(0, 3500) : 'No CV uploaded. Generate a sample website for "Alex Morgan", Senior Product Designer based in Zurich, 9 years experience across startups and agencies. Skills: Figma, UX Research, Design Systems, Prototyping. Previously at Google, Zalando, and two funded startups.'}
+"""
+
+DESIGN PREFERENCES:
+- Goal: ${answers.goal || 'Showcase portfolio'}
+- Style: ${answers.style || 'Clean & minimal'}
+- Accent colour: ${answers.color || '#d4a843'}
+- Sections: ${secs}
+- Tone: ${answers.tone || 'Professional'}
+- Language: ${answers.lang || 'English'}
+- Industry: ${answers.industry || 'Design & Creative'}
+- Photo: ${answers.photo || 'Yes — small'}
+- CTA: ${answers.cta || 'Send an email'}
+- Special highlight: ${answers.extra || '—'}
+
+REQUIREMENTS:
+1. Single HTML file with all CSS embedded in <style>
+2. Fully responsive — mobile-first, breakpoint at 768px
+3. Fixed navigation bar with smooth scroll to sections
+4. Hero section: name, title, tagline, CTA button
+5. Include all requested sections with real content extracted from the CV
+6. Use the accent colour as a CSS variable --accent throughout
+7. Import beautiful Google Fonts suited to the style
+8. Footer with copyright and relevant social links
+9. Subtle hover animations and transitions
+10. Profile photo placeholder: styled circle/square with initials, coloured with accent
+11. Skills displayed as tags/badges
+12. Clean semantic HTML5 structure
+13. Make it genuinely beautiful and memorable — not generic
+
+Reply with ONLY the complete HTML code. No explanation. No markdown fences.`;
+
+  try {
+    const resp = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': apiKey,
+        'anthropic-version': '2023-06-01',
+        'anthropic-dangerous-direct-browser-access': 'true'
+      },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-20250514',
+        max_tokens: 4096,
+        messages: [{ role: 'user', content: prompt }]
+      })
+    });
+
+    if (!resp.ok) {
+      const err = await resp.json();
+      throw new Error(err.error?.message || 'API error ' + resp.status);
+    }
+
+    const data = await resp.json();
+    html = data.content?.map(b => b.text || '').join('') || '';
+    html = html.replace(/^```html\n?/, '').replace(/\n?```$/, '').trim();
+
+    setStep(3);
+    setTimeout(showPreview, 700);
+  } catch (err) {
+    document.getElementById('genRing').style.display = 'none';
+    document.getElementById('genTitle').textContent = 'Something went wrong';
+    document.getElementById('genSub').textContent = 'Please check your API key and try again.';
+    const eb = document.getElementById('errBox');
+    eb.style.display = 'block';
+    eb.textContent = err.message;
+  }
+}
+
+function showPreview() {
+  goTo(4);
+  const iframe = document.getElementById('previewFrame');
+  const doc = iframe.contentDocument || iframe.contentWindow.document;
+  doc.open(); doc.write(html); doc.close();
+}
+
+function download() {
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([html], { type: 'text/html;charset=utf-8' }));
+  a.download = 'cv2page-website.html';
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+}
+
+function restart() {
+  cvText = ''; answers = {}; html = '';
+  document.getElementById('fileInput').value = '';
+  zone.classList.remove('has-file');
+  document.getElementById('uploadIcon').textContent = '📄';
+  document.getElementById('uploadTitle').textContent = 'Drop your CV here or click to browse';
+  document.getElementById('uploadTitle').style.color = '';
+  document.getElementById('uploadHint').textContent = 'PDF · TXT · DOCX — max 10 MB';
+  document.getElementById('btnP1').disabled = true;
+  document.querySelectorAll('.chip').forEach(c => c.classList.remove('on'));
+  document.querySelectorAll('.sw').forEach(s => s.classList.remove('on'));
+  document.querySelectorAll('textarea').forEach(t => t.value = '');
+  document.getElementById('genRing').style.display = '';
+  document.getElementById('errBox').style.display = 'none';
+  goTo(1);
+}
+</script>
+</body>
+</html>
