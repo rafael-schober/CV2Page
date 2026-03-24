@@ -894,6 +894,7 @@ let html = '';
 let cvData = null;   // cached after Stage 1 — skips API call on re-generate
 let editMode = false;
 let apiKey = localStorage.getItem('cv2page_key') || '';
+const zone = document.getElementById('uploadZone');
 
 /* ── Security helpers ── */
 function escHtml(s) {
@@ -1130,7 +1131,6 @@ async function extractPdfText(file) {
 }
 
 /* ── Upload ── */
-const zone = document.getElementById('uploadZone');
 zone.addEventListener('dragover', e => { e.preventDefault(); zone.style.borderColor = 'var(--accent)'; });
 zone.addEventListener('dragleave', () => { zone.style.borderColor = ''; });
 zone.addEventListener('drop', e => { e.preventDefault(); const f = e.dataTransfer.files[0]; if (f) handleFile(f); });
