@@ -680,10 +680,11 @@ body {
         <div class="gen-title" id="genTitle">Reading your CV…</div>
         <div class="gen-sub" id="genSub">This takes about 20–30 seconds</div>
         <div class="gen-steps">
-          <div class="gen-step active" id="gs0"><div class="gs-dot"></div>Analysing CV content</div>
-          <div class="gen-step"        id="gs1"><div class="gs-dot"></div>Configuring design & colours</div>
-          <div class="gen-step"        id="gs2"><div class="gs-dot"></div>Writing HTML & CSS</div>
-          <div class="gen-step"        id="gs3"><div class="gs-dot"></div>Rendering preview</div>
+          <div class="gen-step active" id="gs0"><div class="gs-dot"></div>Extracting CV data (name, experience, skills&hellip;)</div>
+          <div class="gen-step"        id="gs1"><div class="gs-dot"></div>Structuring all CV fields into JSON</div>
+          <div class="gen-step"        id="gs2"><div class="gs-dot"></div>Applying your design preferences</div>
+          <div class="gen-step"        id="gs3"><div class="gs-dot"></div>Writing HTML &amp; CSS</div>
+          <div class="gen-step"        id="gs4"><div class="gs-dot"></div>Rendering preview</div>
         </div>
         <div class="error-box" id="errBox"></div>
       </div>
@@ -896,16 +897,30 @@ function goTo(n) {
   window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
+/* ── API call helper ── */
+async function callClaude(messages, maxTokens) {
+  const resp = await fetch('https://api.anthropic.com/v1/messages', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'x-api-key': apiKey,
+      'anthropic-version': '2023-06-01',
+      'anthropic-dangerous-direct-browser-access': 'true'
+    },
+    body: JSON.stringify({ model: 'claude-sonnet-4-20250514', max_tokens: maxTokens, messages })
+  });
+  if (!resp.ok) { const e = await resp.json(); throw new Error(e.error?.message || 'API error ' + resp.status); }
+  const data = await resp.json();
+  return data.content?.map(b => b.text || '').join('') || '';
+}
+
 /* ── Generate ── */
 async function generate() {
-  if (!apiKey) {
-    alert('Please add your Anthropic API key first (Step 1).');
-    goTo(1); return;
-  }
+  if (!apiKey) { alert('Please add your Anthropic API key first (Step 1).'); goTo(1); return; }
   goTo(3);
 
-  const ids = ['gs0','gs1','gs2','gs3'];
-  const labels = ['Reading your CV…','Configuring design…','Writing HTML & CSS…','Rendering preview…'];
+  const ids = ['gs0','gs1','gs2','gs3','gs4'];
+  const labels = ['Extracting CV data…','Structuring CV fields…','Applying design preferences…','Writing HTML & CSS…','Rendering preview…'];
 
   function setStep(i) {
     ids.forEach((id, j) => {
@@ -917,87 +932,246 @@ async function generate() {
     document.getElementById('genTitle').textContent = labels[i];
   }
 
-  setStep(0);
-  setTimeout(() => setStep(1), 2000);
-  setTimeout(() => setStep(2), 4500);
-
   const secs = Array.isArray(answers.sections) ? answers.sections.join(', ') : 'About, Experience, Skills, Contact';
-
-  const prompt = `You are a world-class web designer and front-end developer. Your task is to create a complete, beautiful, single-file HTML personal website — built EXCLUSIVELY from the CV content provided below.
-
-━━━ CV CONTENT (your single source of truth) ━━━
-${cvText ? cvText.slice(0, 4000) : 'SAMPLE DATA — Name: Alex Morgan, Senior Product Designer, Zurich. 9 years exp. Skills: Figma, UX Research, Design Systems. Previous: Google, Zalando, two funded startups.'}
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-CRITICAL RULES FOR CV USAGE — YOU MUST FOLLOW THESE:
-• Extract the person's REAL full name from the CV and use it everywhere (hero, title, footer, meta)
-• Extract their REAL job title / professional role from the CV
-• Extract ALL real work experience entries (company names, roles, dates, descriptions) — list every single one
-• Extract ALL real skills mentioned in the CV — display each as a badge
-• Extract real education, certifications, languages from the CV
-• Extract real contact info (email, LinkedIn, GitHub, phone) if present
-• NEVER invent or fabricate any information not in the CV
-• NEVER use placeholder names like "John Doe" or "Alex Morgan" if the CV has a real name
-• If a section has no CV data, omit that section entirely — do not make up content
-
-DESIGN PREFERENCES (apply on top of the CV content):
-- Goal: ${answers.goal || 'Showcase portfolio'}
-- Style: ${answers.style || 'Clean & minimal'}
-- Accent colour: ${answers.color || '#d4a843'}
-- Sections: ${secs}
-- Tone: ${answers.tone || 'Professional'}
-- Language: ${answers.lang || 'English'}
-- Industry: ${answers.industry || 'Design & Creative'}
-- Photo placeholder: ${answers.photo || 'Yes — small'}
-- Main CTA: ${answers.cta || 'Send an email'}
-- Special highlight: ${answers.extra || '—'}
-
-TECHNICAL REQUIREMENTS:
-1. Single HTML file — all CSS in <style>, no external CSS files
-2. Fully responsive — mobile-first, breakpoint at 768px
-3. Fixed navigation bar with smooth scroll links to each section
-4. Hero: real name from CV, real title, short bio derived from CV summary/objective
-5. Use --accent CSS variable for the chosen accent colour throughout
-6. Beautiful Google Fonts matching the chosen style
-7. Footer with real name, year, and any social links found in CV
-8. Subtle hover animations and transitions
-9. Profile photo: styled circle with the person's real initials (from their real name)
-10. Skills as styled badge tags — one badge per skill from the CV
-11. Experience entries: company, role, date range, bullet points — all from CV
-12. Clean, semantic HTML5
-
-Make it genuinely beautiful and memorable. Execute the chosen style with precision.
-
-Reply with ONLY the complete HTML. No explanation. No markdown fences.`;
+  const rawCV = cvText ? cvText.slice(0, 5000) : 'SAMPLE: Name: Alex Morgan. Title: Senior Product Designer. Location: Zurich. Email: alex@example.com. Skills: Figma, UX Research, Design Systems, Prototyping. Experience: Google (2020-2024, Senior Designer), Zalando (2018-2020, Product Designer). Education: ZHDK BA Design 2018. Languages: English (native), German (B2).';
 
   try {
-    const resp = await fetch('https://api.anthropic.com/v1/messages', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'x-api-key': apiKey,
-        'anthropic-version': '2023-06-01',
-        'anthropic-dangerous-direct-browser-access': 'true'
-      },
-      body: JSON.stringify({
-        model: 'claude-sonnet-4-20250514',
-        max_tokens: 6000,
-        messages: [{ role: 'user', content: prompt }]
-      })
-    });
+    /* ── STAGE 1: Extract CV into structured JSON via Claude ── */
+    setStep(0);
+    document.getElementById('genSub').textContent = 'Step 1 of 2 — Reading your CV carefully…';
 
-    if (!resp.ok) {
-      const err = await resp.json();
-      throw new Error(err.error?.message || 'API error ' + resp.status);
-    }
+    const extractRaw = await callClaude([{ role: 'user', content: `Extract ALL data from this CV into JSON. Return ONLY valid JSON, no markdown fences, no explanation. Use this exact schema (empty array [] if not found, null if string missing):\n{"name":"","title":"","location":"","email":"","phone":null,"linkedin":null,"github":null,"website":null,"summary":"2-3 sentence professional summary based on CV","experience":[{"company":"","role":"","start":"","end":"","location":null,"bullets":[]}],"education":[{"institution":"","degree":"","start":null,"end":null,"note":null}],"skills":[],"languages":[{"language":"","level":""}],"certifications":[],"projects":[{"name":"","description":"","url":null,"tech":[]}],"awards":[]}\n\nCV:\n"""\n${rawCV}\n"""` }], 2000);
 
-    const data = await resp.json();
-    html = data.content?.map(b => b.text || '').join('') || '';
-    html = html.replace(/^```html\n?/, '').replace(/\n?```$/, '').trim();
+    setStep(1);
+    const cleanJson = extractRaw.replace(/^```[a-z]*\n?/, '').replace(/\n?```$/, '').trim();
+    let cvData;
+    try { cvData = JSON.parse(cleanJson); }
+    catch(e) { const m = cleanJson.match(/\{[\s\S]*\}/); cvData = m ? JSON.parse(m[0]) : null; }
+    if (!cvData) throw new Error('Could not parse CV data. Please try again.');
 
+    /* ── STAGE 2: Build HTML from structured data + preferences ── */
+    setStep(2);
+    document.getElementById('genSub').textContent = 'Step 2 of 2 — Building your website…';
+    await new Promise(r => setTimeout(r, 300));
     setStep(3);
-    setTimeout(showPreview, 700);
-  } catch (err) {
+
+    const photoStyle = answers.photo || 'Yes — small';
+    const showPhoto = photoStyle !== 'No photo';
+    const photoBig  = photoStyle === 'Yes — prominent';
+    const initials  = (cvData.name || 'AB').split(' ').map(w => w[0]).slice(0,2).join('').toUpperCase();
+    const accent    = answers.color || '#d4a843';
+
+    const styleGuide = {
+      'Clean & minimal':       { fonts:'Instrument+Serif:ital,wght@0,400;1,400&family=DM+Sans:wght@300;400;500', fSerif:"'Instrument Serif',Georgia,serif", fSans:"'DM Sans',sans-serif", bg:'#faf9f7', text:'#1a1917', surface:'#f0ede8', border:'rgba(0,0,0,0.08)', navBg:'rgba(250,249,247,0.94)', hero:'58px', dark:false },
+      'Modern & bold':         { fonts:'Syne:wght@400;700;800&family=Inter:wght@300;400;500',                    fSerif:"'Syne',sans-serif",               fSans:"'Inter',sans-serif",     bg:'#0a0a0a', text:'#f5f5f5', surface:'#141414', border:'rgba(255,255,255,0.09)', navBg:'rgba(10,10,10,0.92)', hero:'72px', dark:true },
+      'Creative & expressive': { fonts:'Playfair+Display:ital,wght@0,400;1,400&family=Raleway:wght@300;400;600', fSerif:"'Playfair Display',Georgia,serif", fSans:"'Raleway',sans-serif",  bg:'#fffef9', text:'#1c1a14', surface:'#f5f2e8', border:'rgba(0,0,0,0.09)', navBg:'rgba(255,254,249,0.95)', hero:'64px', dark:false },
+      'Corporate & formal':    { fonts:'Fraunces:ital,wght@0,400;1,300&family=Source+Sans+3:wght@300;400;600',  fSerif:"'Fraunces',Georgia,serif",         fSans:"'Source Sans 3',sans-serif", bg:'#f8f9fb', text:'#0f1923', surface:'#eef1f5', border:'rgba(0,0,0,0.08)', navBg:'rgba(248,249,251,0.96)', hero:'50px', dark:false }
+    };
+    const sg = styleGuide[answers.style] || styleGuide['Clean & minimal'];
+    const dark = sg.dark;
+    const mutedColor = dark ? 'rgba(255,255,255,0.45)' : 'rgba(0,0,0,0.45)';
+    const ctaBg = dark ? '#000' : '#fff';
+
+    // CTA button
+    const ctaMap = {
+      'Send an email':    cvData.email    ? `<a href="mailto:${cvData.email}" class="cta-btn">Get in touch</a>` : '',
+      'Visit LinkedIn':   cvData.linkedin ? `<a href="${cvData.linkedin.startsWith('http')?cvData.linkedin:'https://linkedin.com/in/'+cvData.linkedin}" target="_blank" class="cta-btn">View LinkedIn</a>` : '',
+      'Download CV':      `<a href="#" class="cta-btn" onclick="alert('Link your CV PDF here');return false;">Download CV</a>`,
+      'Fill contact form':`<a href="#contact" class="cta-btn">Contact me</a>`
+    };
+    const ctaHtml = ctaMap[answers.cta] || ctaMap['Send an email'] || '';
+
+    // Nav links from selected sections
+    const secList = secs.split(',').map(s => s.trim());
+    const navLinks = secList.map(s => `<a href="#${s.toLowerCase().replace(/\s+/g,'-')}">${s}</a>`).join('');
+
+    // Social links
+    const socials = [
+      cvData.email    ? `<a href="mailto:${cvData.email}">Email</a>` : '',
+      cvData.linkedin ? `<a href="${cvData.linkedin.startsWith('http')?cvData.linkedin:'https://linkedin.com/in/'+cvData.linkedin}" target="_blank">LinkedIn</a>` : '',
+      cvData.github   ? `<a href="${cvData.github.startsWith('http')?cvData.github:'https://github.com/'+cvData.github}" target="_blank">GitHub</a>` : '',
+      cvData.website  ? `<a href="${cvData.website}" target="_blank">Website</a>` : ''
+    ].filter(Boolean).join(' · ');
+
+    // Photo HTML
+    const photoHtml = showPhoto ? `<div class="profile-photo ${photoBig?'big':'small'}"><div class="initials-circle">${initials}</div></div>` : '';
+
+    // Highlight banner
+    const highlightHtml = answers.extra && answers.extra.trim()
+      ? `<div class="highlight-banner"><span>✦</span> ${answers.extra.trim()}</div>` : '';
+
+    // Experience section
+    const expHtml = (cvData.experience||[]).map(e=>`
+<div class="exp-item">
+  <div class="exp-header">
+    <div><div class="exp-role">${e.role||''}</div><div class="exp-company">${e.company||''}${e.location?' · '+e.location:''}</div></div>
+    <div class="exp-dates">${e.start||''}${e.end?' – '+e.end:''}</div>
+  </div>
+  ${e.bullets&&e.bullets.length?'<ul class="exp-bullets">'+e.bullets.map(b=>`<li>${b}</li>`).join('')+'</ul>':''}
+</div>`).join('');
+
+    // Education section
+    const eduHtml = (cvData.education||[]).map(e=>`
+<div class="edu-item">
+  <div class="edu-degree">${e.degree||''}</div>
+  <div class="edu-inst">${e.institution||''}${(e.start||e.end)?' · '+(e.start||'')+(e.end?' – '+e.end:''):''}${e.note?' · '+e.note:''}</div>
+</div>`).join('');
+
+    // Skills
+    const skillsHtml = (cvData.skills||[]).map(s=>`<span class="skill-tag">${s}</span>`).join('');
+    const langsHtml  = (cvData.languages||[]).map(l=>`<span class="skill-tag">${l.language}${l.level?' · '+l.level:''}</span>`).join('');
+    const certsHtml  = (cvData.certifications||[]).map(c=>`<li>${c}</li>`).join('');
+
+    // Projects
+    const projHtml = (cvData.projects||[]).map(p=>`
+<div class="proj-item">
+  <div class="proj-name">${p.url?'<a href="'+p.url+'" target="_blank">'+p.name+' ↗</a>':p.name}</div>
+  <div class="proj-desc">${p.description||''}</div>
+  ${p.tech&&p.tech.length?'<div class="proj-tech">'+p.tech.map(t=>'<span class="skill-tag small">'+t+'</span>').join('')+'</div>':''}
+</div>`).join('');
+
+    // Build requested sections
+    const sectionsHtml = secList.map(sec => {
+      const id = sec.toLowerCase().replace(/\s+/g,'-');
+      switch(sec.toLowerCase()) {
+        case 'about': return cvData.summary ? `
+<section id="${id}" class="section"><div class="section-inner">
+  <h2 class="section-title">About</h2>
+  <p class="about-text">${cvData.summary}</p>
+  ${cvData.location?'<p class="about-meta">📍 '+cvData.location+'</p>':''}
+</div></section>` : '';
+
+        case 'experience': return expHtml ? `
+<section id="${id}" class="section"><div class="section-inner">
+  <h2 class="section-title">Experience</h2>
+  <div class="exp-list">${expHtml}</div>
+</div></section>` : '';
+
+        case 'skills': return (skillsHtml||langsHtml) ? `
+<section id="${id}" class="section alt"><div class="section-inner">
+  <h2 class="section-title">Skills</h2>
+  <div class="skills-wrap">${skillsHtml}${langsHtml}</div>
+</div></section>` : '';
+
+        case 'education': return (eduHtml||certsHtml) ? `
+<section id="${id}" class="section"><div class="section-inner">
+  <h2 class="section-title">Education</h2>
+  <div class="edu-list">${eduHtml}</div>
+  ${certsHtml?'<h3 class="subsection-title">Certifications</h3><ul class="cert-list">'+certsHtml+'</ul>':''}
+</div></section>` : '';
+
+        case 'projects': return projHtml ? `
+<section id="${id}" class="section alt"><div class="section-inner">
+  <h2 class="section-title">Projects</h2>
+  <div class="proj-list">${projHtml}</div>
+</div></section>` : '';
+
+        case 'contact': return `
+<section id="${id}" class="section"><div class="section-inner contact-inner">
+  <h2 class="section-title">Get in Touch</h2>
+  ${cvData.email?'<a href="mailto:'+cvData.email+'" class="contact-email">'+cvData.email+'</a>':''}
+  <div class="contact-links">${socials}</div>
+</div></section>`;
+
+        default: return '';
+      }
+    }).filter(Boolean).join('\n');
+
+    html = `<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>${cvData.name||'Portfolio'} — ${cvData.title||'Personal Website'}</title>
+<meta name="description" content="${(cvData.summary||'').slice(0,160)}">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=${sg.fonts}&display=swap" rel="stylesheet">
+<style>
+:root{--accent:${accent};--bg:${sg.bg};--text:${sg.text};--surface:${sg.surface};--border:${sg.border};--muted:${mutedColor};--serif:${sg.fSerif};--sans:${sg.fSans}}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth}
+body{font-family:var(--sans);background:var(--bg);color:var(--text);font-size:16px;line-height:1.7;-webkit-font-smoothing:antialiased}
+a{color:var(--accent);text-decoration:none}a:hover{text-decoration:underline}
+nav{position:fixed;top:0;left:0;right:0;z-index:100;background:${sg.navBg};backdrop-filter:blur(10px);border-bottom:1px solid var(--border);padding:1rem 2rem;display:flex;align-items:center;justify-content:space-between}
+.nav-name{font-family:var(--serif);font-size:17px;font-weight:400}
+.nav-links{display:flex;gap:1.5rem;font-size:13px}.nav-links a{color:var(--muted);transition:color .2s}.nav-links a:hover{color:var(--accent);text-decoration:none}
+@media(max-width:600px){.nav-links{display:none}}
+.hero{min-height:100vh;display:flex;flex-direction:column;justify-content:center;padding:6rem 2rem 4rem;max-width:900px;margin:0 auto}
+.initials-circle{display:flex;align-items:center;justify-content:center;border-radius:50%;background:var(--accent);color:${ctaBg};font-family:var(--serif);font-weight:400;letter-spacing:.05em}
+.profile-photo.big .initials-circle{width:100px;height:100px;font-size:32px}
+.profile-photo.small .initials-circle{width:56px;height:56px;font-size:18px}
+.hero-photo-row{display:flex;align-items:center;gap:1.5rem;margin-bottom:1.5rem;flex-wrap:wrap}
+.hero-name{font-family:var(--serif);font-size:${sg.hero};font-weight:400;letter-spacing:-1px;line-height:1.05;margin-bottom:.5rem}
+.hero-title-text{font-size:18px;color:var(--accent);font-weight:400;margin-bottom:1rem}
+.hero-summary{font-size:17px;color:var(--muted);max-width:560px;line-height:1.75;margin-bottom:2rem;font-weight:300}
+.highlight-banner{display:inline-flex;align-items:center;gap:8px;font-size:13px;border:1px solid var(--accent);color:var(--accent);padding:6px 16px;border-radius:20px;margin-bottom:1.5rem;opacity:.85}
+.cta-btn{display:inline-block;padding:12px 28px;background:var(--accent);color:${ctaBg};border-radius:8px;font-size:15px;font-weight:500;transition:opacity .2s}.cta-btn:hover{opacity:.82;text-decoration:none}
+.hero-meta{margin-top:1rem;font-size:13px;color:var(--muted)}
+.section{padding:5rem 2rem;border-top:1px solid var(--border)}.section.alt{background:var(--surface)}
+.section-inner{max-width:900px;margin:0 auto}
+.section-title{font-family:var(--serif);font-size:36px;font-weight:400;margin-bottom:2.5rem;letter-spacing:-.5px}
+.subsection-title{font-family:var(--serif);font-size:22px;font-weight:400;margin:2rem 0 1rem}
+.about-text{font-size:17px;line-height:1.8;max-width:680px}.about-meta{margin-top:.75rem;font-size:14px;color:var(--muted)}
+.exp-list{display:flex;flex-direction:column;gap:2.5rem}
+.exp-header{display:flex;justify-content:space-between;align-items:flex-start;gap:1rem;margin-bottom:.75rem;flex-wrap:wrap}
+.exp-role{font-size:17px;font-weight:500}.exp-company{font-size:14px;color:var(--muted);margin-top:2px}
+.exp-dates{font-size:13px;color:var(--accent);white-space:nowrap;flex-shrink:0;margin-top:3px}
+.exp-bullets{list-style:none;padding:0;display:flex;flex-direction:column;gap:6px}
+.exp-bullets li{font-size:15px;color:var(--muted);padding-left:1.2em;position:relative;line-height:1.6}
+.exp-bullets li::before{content:'—';position:absolute;left:0;color:var(--accent);font-size:12px;top:4px}
+.skills-wrap{display:flex;flex-wrap:wrap;gap:8px}
+.skill-tag{font-size:13px;padding:5px 13px;border-radius:20px;border:1px solid var(--border);background:${dark?'rgba(255,255,255,0.05)':'rgba(0,0,0,0.04)'};color:var(--text)}
+.skill-tag.small{font-size:11px;padding:3px 10px}
+.edu-list{display:flex;flex-direction:column;gap:1.5rem}
+.edu-degree{font-size:16px;font-weight:500}.edu-inst{font-size:14px;color:var(--muted);margin-top:3px}
+.cert-list{list-style:none;padding:0;display:flex;flex-direction:column;gap:6px}
+.cert-list li{font-size:15px;color:var(--muted);padding-left:1.2em;position:relative}
+.cert-list li::before{content:'✓';position:absolute;left:0;color:var(--accent)}
+.proj-list{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:1.5rem}
+.proj-item{padding:1.5rem;border:1px solid var(--border);border-radius:12px;transition:border-color .2s}.proj-item:hover{border-color:var(--accent)}
+.proj-name{font-size:16px;font-weight:500;margin-bottom:.5rem}.proj-name a{color:var(--text)}.proj-name a:hover{color:var(--accent)}
+.proj-desc{font-size:14px;color:var(--muted);line-height:1.6;margin-bottom:.75rem}
+.proj-tech{display:flex;flex-wrap:wrap;gap:6px;margin-top:.5rem}
+.contact-inner{text-align:center}
+.contact-email{display:block;font-family:var(--serif);font-size:clamp(22px,4vw,40px);font-style:italic;color:var(--accent);margin-bottom:1.5rem}
+.contact-email:hover{text-decoration:none;opacity:.8}
+.contact-links{display:flex;justify-content:center;gap:1.5rem;font-size:14px;flex-wrap:wrap}
+.contact-links a{color:var(--muted);transition:color .2s}.contact-links a:hover{color:var(--accent);text-decoration:none}
+footer{padding:2.5rem 2rem;border-top:1px solid var(--border);text-align:center;font-size:13px;color:var(--muted)}
+footer a{color:var(--muted)}footer a:hover{color:var(--accent)}
+@media(max-width:768px){.hero{padding:5rem 1.25rem 3rem}.section{padding:3.5rem 1.25rem}.exp-header{flex-direction:column;gap:.25rem}.proj-list{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<nav>
+  <div class="nav-name">${cvData.name||''}</div>
+  <div class="nav-links">${navLinks}</div>
+</nav>
+<div class="hero">
+  ${photoBig ? photoHtml : ''}
+  ${highlightHtml}
+  <div class="hero-photo-row">
+    ${!photoBig ? photoHtml : ''}
+    <div>
+      <h1 class="hero-name">${cvData.name||''}</h1>
+      <div class="hero-title-text">${cvData.title||''}</div>
+    </div>
+  </div>
+  <p class="hero-summary">${cvData.summary||''}</p>
+  ${ctaHtml}
+  ${(cvData.location||cvData.email)?'<p class="hero-meta">'+(cvData.location||'')+(cvData.location&&cvData.email?' · ':'')+(cvData.email||'')+'</p>':''}
+</div>
+${sectionsHtml}
+<footer>
+  <p>${cvData.name||''} &copy; ${new Date().getFullYear()}${socials?' &nbsp;·&nbsp; '+socials:''}</p>
+</footer>
+</body>
+</html>`;
+
+    setStep(4);
+    setTimeout(showPreview, 500);
+
+  } catch(err) {
     document.getElementById('genRing').style.display = 'none';
     document.getElementById('genTitle').textContent = 'Something went wrong';
     document.getElementById('genSub').textContent = 'Please check your API key and try again.';
@@ -1006,6 +1180,8 @@ Reply with ONLY the complete HTML. No explanation. No markdown fences.`;
     eb.textContent = err.message;
   }
 }
+
+
 
 function showPreview() {
   goTo(4);
