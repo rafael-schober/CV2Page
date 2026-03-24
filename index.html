@@ -182,12 +182,16 @@ body {
 
 .features-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  grid-template-columns: repeat(2, 1fr);
   gap: 1px;
   background: var(--border);
   border: 1px solid var(--border);
   border-radius: var(--r-lg);
   overflow: hidden;
+}
+
+@media (max-width: 560px) {
+  .features-grid { grid-template-columns: 1fr; }
 }
 
 .feat-card {
@@ -801,6 +805,40 @@ function pickColor(el, qId, val) {
   answers[qId] = val;
 }
 
+/* ── PDF.js ── */
+const PDFJS_URL = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js';
+let pdfJsLoaded = false;
+
+function loadPdfJs(cb) {
+  if (pdfJsLoaded) { cb(); return; }
+  const s = document.createElement('script');
+  s.src = PDFJS_URL;
+  s.onload = () => {
+    pdfjsLib.GlobalWorkerOptions.workerSrc =
+      'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+    pdfJsLoaded = true; cb();
+  };
+  document.head.appendChild(s);
+}
+
+async function extractPdfText(file) {
+  return new Promise((resolve, reject) => {
+    loadPdfJs(async () => {
+      try {
+        const ab = await file.arrayBuffer();
+        const pdf = await pdfjsLib.getDocument({ data: ab }).promise;
+        let text = '';
+        for (let i = 1; i <= pdf.numPages; i++) {
+          const page = await pdf.getPage(i);
+          const content = await page.getTextContent();
+          text += content.items.map(it => it.str).join(' ') + '\n';
+        }
+        resolve(text.trim());
+      } catch (e) { reject(e); }
+    });
+  });
+}
+
 /* ── Upload ── */
 const zone = document.getElementById('uploadZone');
 zone.addEventListener('dragover', e => { e.preventDefault(); zone.style.borderColor = 'var(--accent)'; });
@@ -808,16 +846,41 @@ zone.addEventListener('dragleave', () => { zone.style.borderColor = ''; });
 zone.addEventListener('drop', e => { e.preventDefault(); const f = e.dataTransfer.files[0]; if (f) handleFile(f); });
 document.getElementById('fileInput').addEventListener('change', e => { if (e.target.files[0]) handleFile(e.target.files[0]); });
 
-function handleFile(f) {
+async function handleFile(f) {
   zone.classList.add('has-file');
-  document.getElementById('uploadIcon').textContent = '✓';
-  document.getElementById('uploadTitle').textContent = f.name;
-  document.getElementById('uploadTitle').style.color = 'var(--green)';
-  document.getElementById('uploadHint').innerHTML = `<span class="upload-ok">${(f.size/1024).toFixed(0)} KB · Ready</span>`;
-  document.getElementById('btnP1').disabled = false;
-  const r = new FileReader();
-  r.onload = ev => { cvText = ev.target.result || ''; };
-  r.readAsText(f);
+  document.getElementById('uploadIcon').textContent = '⏳';
+  document.getElementById('uploadTitle').textContent = 'Reading ' + f.name + '…';
+  document.getElementById('uploadTitle').style.color = 'var(--accent)';
+  document.getElementById('uploadHint').innerHTML = `<span style="color:var(--muted)">Extracting text…</span>`;
+  document.getElementById('btnP1').disabled = true;
+
+  try {
+    if (f.name.toLowerCase().endsWith('.pdf')) {
+      cvText = await extractPdfText(f);
+    } else {
+      cvText = await f.text();
+    }
+
+    if (!cvText || cvText.trim().length < 30) {
+      throw new Error('Could not extract text. Please try a text-based PDF or paste your CV as TXT.');
+    }
+
+    document.getElementById('uploadIcon').textContent = '✓';
+    document.getElementById('uploadTitle').textContent = f.name;
+    document.getElementById('uploadTitle').style.color = 'var(--green)';
+    document.getElementById('uploadHint').innerHTML =
+      `<span class="upload-ok">${(f.size/1024).toFixed(0)} KB · ${cvText.length} characters extracted ✓</span>`;
+    document.getElementById('btnP1').disabled = false;
+
+  } catch (err) {
+    zone.classList.remove('has-file');
+    document.getElementById('uploadIcon').textContent = '⚠';
+    document.getElementById('uploadTitle').textContent = 'Error reading file';
+    document.getElementById('uploadTitle').style.color = 'var(--red)';
+    document.getElementById('uploadHint').innerHTML =
+      `<span style="color:var(--red);font-size:12px">${err.message}</span>`;
+    cvText = '';
+  }
 }
 
 /* ── Navigation ── */
@@ -860,14 +923,24 @@ async function generate() {
 
   const secs = Array.isArray(answers.sections) ? answers.sections.join(', ') : 'About, Experience, Skills, Contact';
 
-  const prompt = `You are a world-class web designer and front-end developer. Create a complete, beautiful, single-file HTML personal website.
+  const prompt = `You are a world-class web designer and front-end developer. Your task is to create a complete, beautiful, single-file HTML personal website — built EXCLUSIVELY from the CV content provided below.
 
-CV CONTENT:
-"""
-${cvText ? cvText.slice(0, 3500) : 'No CV uploaded. Generate a sample website for "Alex Morgan", Senior Product Designer based in Zurich, 9 years experience across startups and agencies. Skills: Figma, UX Research, Design Systems, Prototyping. Previously at Google, Zalando, and two funded startups.'}
-"""
+━━━ CV CONTENT (your single source of truth) ━━━
+${cvText ? cvText.slice(0, 4000) : 'SAMPLE DATA — Name: Alex Morgan, Senior Product Designer, Zurich. 9 years exp. Skills: Figma, UX Research, Design Systems. Previous: Google, Zalando, two funded startups.'}
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-DESIGN PREFERENCES:
+CRITICAL RULES FOR CV USAGE — YOU MUST FOLLOW THESE:
+• Extract the person's REAL full name from the CV and use it everywhere (hero, title, footer, meta)
+• Extract their REAL job title / professional role from the CV
+• Extract ALL real work experience entries (company names, roles, dates, descriptions) — list every single one
+• Extract ALL real skills mentioned in the CV — display each as a badge
+• Extract real education, certifications, languages from the CV
+• Extract real contact info (email, LinkedIn, GitHub, phone) if present
+• NEVER invent or fabricate any information not in the CV
+• NEVER use placeholder names like "John Doe" or "Alex Morgan" if the CV has a real name
+• If a section has no CV data, omit that section entirely — do not make up content
+
+DESIGN PREFERENCES (apply on top of the CV content):
 - Goal: ${answers.goal || 'Showcase portfolio'}
 - Style: ${answers.style || 'Clean & minimal'}
 - Accent colour: ${answers.color || '#d4a843'}
@@ -875,26 +948,27 @@ DESIGN PREFERENCES:
 - Tone: ${answers.tone || 'Professional'}
 - Language: ${answers.lang || 'English'}
 - Industry: ${answers.industry || 'Design & Creative'}
-- Photo: ${answers.photo || 'Yes — small'}
-- CTA: ${answers.cta || 'Send an email'}
+- Photo placeholder: ${answers.photo || 'Yes — small'}
+- Main CTA: ${answers.cta || 'Send an email'}
 - Special highlight: ${answers.extra || '—'}
 
-REQUIREMENTS:
-1. Single HTML file with all CSS embedded in <style>
+TECHNICAL REQUIREMENTS:
+1. Single HTML file — all CSS in <style>, no external CSS files
 2. Fully responsive — mobile-first, breakpoint at 768px
-3. Fixed navigation bar with smooth scroll to sections
-4. Hero section: name, title, tagline, CTA button
-5. Include all requested sections with real content extracted from the CV
-6. Use the accent colour as a CSS variable --accent throughout
-7. Import beautiful Google Fonts suited to the style
-8. Footer with copyright and relevant social links
-9. Subtle hover animations and transitions
-10. Profile photo placeholder: styled circle/square with initials, coloured with accent
-11. Skills displayed as tags/badges
-12. Clean semantic HTML5 structure
-13. Make it genuinely beautiful and memorable — not generic
+3. Fixed navigation bar with smooth scroll links to each section
+4. Hero: real name from CV, real title, short bio derived from CV summary/objective
+5. Use --accent CSS variable for the chosen accent colour throughout
+6. Beautiful Google Fonts matching the chosen style
+7. Footer with real name, year, and any social links found in CV
+8. Subtle hover animations and transitions
+9. Profile photo: styled circle with the person's real initials (from their real name)
+10. Skills as styled badge tags — one badge per skill from the CV
+11. Experience entries: company, role, date range, bullet points — all from CV
+12. Clean, semantic HTML5
 
-Reply with ONLY the complete HTML code. No explanation. No markdown fences.`;
+Make it genuinely beautiful and memorable. Execute the chosen style with precision.
+
+Reply with ONLY the complete HTML. No explanation. No markdown fences.`;
 
   try {
     const resp = await fetch('https://api.anthropic.com/v1/messages', {
@@ -907,7 +981,7 @@ Reply with ONLY the complete HTML code. No explanation. No markdown fences.`;
       },
       body: JSON.stringify({
         model: 'claude-sonnet-4-20250514',
-        max_tokens: 4096,
+        max_tokens: 6000,
         messages: [{ role: 'user', content: prompt }]
       })
     });
