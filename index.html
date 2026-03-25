@@ -896,6 +896,14 @@ let editMode = false;
 let apiKey = localStorage.getItem('cv2page_key') || '';
 const zone = document.getElementById('uploadZone');
 
+/* ── Style presets (must be before init calls that use updateMiniPreview) ── */
+const STYLE_GUIDE = {
+  'Clean & minimal':       { fonts:'Instrument+Serif:ital,wght@0,400;1,400&family=DM+Sans:wght@300;400;500', fSerif:"'Instrument Serif',Georgia,serif", fSans:"'DM Sans',sans-serif", bg:'#faf9f7', text:'#1a1917', surface:'#f0ede8', border:'rgba(0,0,0,0.08)', navBg:'rgba(250,249,247,0.94)', hero:'58px', dark:false },
+  'Modern & bold':         { fonts:'Syne:wght@400;700;800&family=Inter:wght@300;400;500',                    fSerif:"'Syne',sans-serif",               fSans:"'Inter',sans-serif",     bg:'#0a0a0a', text:'#f5f5f5', surface:'#141414', border:'rgba(255,255,255,0.09)', navBg:'rgba(10,10,10,0.92)', hero:'72px', dark:true },
+  'Creative & expressive': { fonts:'Playfair+Display:ital,wght@0,400;1,400&family=Raleway:wght@300;400;600', fSerif:"'Playfair Display',Georgia,serif", fSans:"'Raleway',sans-serif",  bg:'#fffef9', text:'#1c1a14', surface:'#f5f2e8', border:'rgba(0,0,0,0.09)', navBg:'rgba(255,254,249,0.95)', hero:'64px', dark:false },
+  'Corporate & formal':    { fonts:'Fraunces:ital,wght@0,400;1,300&family=Source+Sans+3:wght@300;400;600',  fSerif:"'Fraunces',Georgia,serif",         fSans:"'Source Sans 3',sans-serif", bg:'#f8f9fb', text:'#0f1923', surface:'#eef1f5', border:'rgba(0,0,0,0.08)', navBg:'rgba(248,249,251,0.96)', hero:'50px', dark:false }
+};
+
 /* ── Security helpers ── */
 function escHtml(s) {
   if (s == null) return '';
@@ -1246,13 +1254,6 @@ async function callClaudeStream(messages, maxTokens, onChunk) {
   return fullText;
 }
 
-/* ── Style presets (global so Phase 2 features can access them) ── */
-const STYLE_GUIDE = {
-  'Clean & minimal':       { fonts:'Instrument+Serif:ital,wght@0,400;1,400&family=DM+Sans:wght@300;400;500', fSerif:"'Instrument Serif',Georgia,serif", fSans:"'DM Sans',sans-serif", bg:'#faf9f7', text:'#1a1917', surface:'#f0ede8', border:'rgba(0,0,0,0.08)', navBg:'rgba(250,249,247,0.94)', hero:'58px', dark:false },
-  'Modern & bold':         { fonts:'Syne:wght@400;700;800&family=Inter:wght@300;400;500',                    fSerif:"'Syne',sans-serif",               fSans:"'Inter',sans-serif",     bg:'#0a0a0a', text:'#f5f5f5', surface:'#141414', border:'rgba(255,255,255,0.09)', navBg:'rgba(10,10,10,0.92)', hero:'72px', dark:true },
-  'Creative & expressive': { fonts:'Playfair+Display:ital,wght@0,400;1,400&family=Raleway:wght@300;400;600', fSerif:"'Playfair Display',Georgia,serif", fSans:"'Raleway',sans-serif",  bg:'#fffef9', text:'#1c1a14', surface:'#f5f2e8', border:'rgba(0,0,0,0.09)', navBg:'rgba(255,254,249,0.95)', hero:'64px', dark:false },
-  'Corporate & formal':    { fonts:'Fraunces:ital,wght@0,400;1,300&family=Source+Sans+3:wght@300;400;600',  fSerif:"'Fraunces',Georgia,serif",         fSans:"'Source Sans 3',sans-serif", bg:'#f8f9fb', text:'#0f1923', surface:'#eef1f5', border:'rgba(0,0,0,0.08)', navBg:'rgba(248,249,251,0.96)', hero:'50px', dark:false }
-};
 
 /* ── Generate ── */
 async function generate() {
